@@ -35,24 +35,33 @@ jobs:
         run: xcodegen generate --spec project.yml
       - name: Pick available iOS simulator
         run: |
-          DEVICE=$(xcrun simctl list devices available | awk -F '[()]' '/iPhone/ {print $1; exit}' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
-          if [ -z "$DEVICE" ]; then echo "No iPhone simulator available" >&2; exit 1; fi
-          echo "SIMULATOR_NAME=$DEVICE" >> "$GITHUB_ENV"
-          echo "Using simulator: $DEVICE"
+          python3 - <<'PY' >> "$GITHUB_ENV"
+          import json
+          import subprocess
+          data = json.loads(subprocess.check_output(["xcrun", "simctl", "list", "devices", "available", "-j"]))
+          for devices in data["devices"].values():
+              for device in devices:
+                  if device.get("isAvailable") and device["name"].startswith("iPhone"):
+                      print(f"SIMULATOR_NAME={device['name']}")
+                      print(f"SIMULATOR_UDID={device['udid']}")
+                      raise SystemExit(0)
+          raise SystemExit("No iPhone simulator available")
+          PY
+          echo "Using simulator: $SIMULATOR_NAME ($SIMULATOR_UDID)"
       - name: Test Memory Atlas in simulator
         run: |
-          xcodebuild test             -project WCS-Insight.xcodeproj             -scheme MemoryAtlas             -destination "platform=iOS Simulator,name=$SIMULATOR_NAME"             CODE_SIGN_IDENTITY=""             CODE_SIGNING_REQUIRED=NO             CODE_SIGNING_ALLOWED=NO
+          xcodebuild test             -project WCS-Insight.xcodeproj             -scheme MemoryAtlas             -destination "id=$SIMULATOR_UDID"             CODE_SIGN_IDENTITY=""             CODE_SIGNING_REQUIRED=NO             CODE_SIGNING_ALLOWED=NO
       - name: Capture simulator screenshot
-        if: always()
+        if: success()
         run: |
           mkdir -p artifacts
-          xcrun simctl boot "$SIMULATOR_NAME" || true
-          xcrun simctl bootstatus "$SIMULATOR_NAME" -b
-          xcrun simctl launch "$SIMULATOR_NAME" org.worldclassscholars.memoryatlas
+          xcrun simctl boot "$SIMULATOR_UDID" || true
+          xcrun simctl bootstatus "$SIMULATOR_UDID" -b
+          xcrun simctl launch "$SIMULATOR_UDID" org.worldclassscholars.memoryatlas
           sleep 5
-          xcrun simctl io "$SIMULATOR_NAME" screenshot artifacts/memory-atlas-simulator.png
+          xcrun simctl io "$SIMULATOR_UDID" screenshot artifacts/memory-atlas-simulator.png
       - name: Upload simulator screenshot
-        if: always()
+        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: memory-atlas-simulator
