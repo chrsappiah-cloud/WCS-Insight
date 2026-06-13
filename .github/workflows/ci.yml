@@ -42,3 +42,16 @@ jobs:
       - name: Test Memory Atlas in simulator
         run: |
           xcodebuild test             -project WCS-Insight.xcodeproj             -scheme MemoryAtlas             -destination "platform=iOS Simulator,name=$SIMULATOR_NAME"             CODE_SIGN_IDENTITY=""             CODE_SIGNING_REQUIRED=NO             CODE_SIGNING_ALLOWED=NO
+      - name: Capture simulator screenshot
+        if: always()
+        run: |
+          mkdir -p artifacts
+          xcrun simctl launch booted org.worldclassscholars.memoryatlas || true
+          sleep 5
+          xcrun simctl io booted screenshot artifacts/memory-atlas-simulator.png
+      - name: Upload simulator screenshot
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: memory-atlas-simulator
+          path: artifacts/memory-atlas-simulator.png
