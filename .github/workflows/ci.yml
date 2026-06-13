@@ -40,11 +40,21 @@ jobs:
           echo "SIMULATOR_NAME=$DEVICE" >> "$GITHUB_ENV"
           echo "Using simulator: $DEVICE"
       - name: Test Memory Atlas in simulator
-        env:
-          WCS_SIMULATOR_SCREENSHOT_PATH: ${{ github.workspace }}/artifacts/memory-atlas-simulator.png
         run: |
           mkdir -p artifacts
+          (
+            sleep 60
+            for attempt in {1..18}; do
+              xcrun simctl io booted screenshot artifacts/memory-atlas-simulator.png || true
+              sleep 8
+            done
+          ) &
+          SCREENSHOT_PID=$!
+          set +e
           xcodebuild test             -project WCS-Insight.xcodeproj             -scheme MemoryAtlas             -destination "platform=iOS Simulator,name=$SIMULATOR_NAME"             CODE_SIGN_IDENTITY=""             CODE_SIGNING_REQUIRED=NO             CODE_SIGNING_ALLOWED=NO
+          TEST_STATUS=$?
+          wait "$SCREENSHOT_PID" || true
+          exit "$TEST_STATUS"
       - name: Upload simulator screenshot
         if: success()
         uses: actions/upload-artifact@v4
