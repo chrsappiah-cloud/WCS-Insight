@@ -30,15 +30,19 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Verify Xcode project exists
+      - name: Detect Xcode project
         run: |
-          if [ ! -d "$PROJECT_NAME.xcodeproj" ]; then
+          if [ -d "$PROJECT_NAME.xcodeproj" ]; then
+            echo "HAS_XCODE_PROJECT=true" >> "$GITHUB_ENV"
+          else
+            echo "HAS_XCODE_PROJECT=false" >> "$GITHUB_ENV"
             echo "::notice::No root Xcode project yet. Package tests validate the implementation scaffold."
-            exit 0
           fi
       - name: Select Xcode
+        if: env.HAS_XCODE_PROJECT == 'true'
         run: sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
       - name: Resolve project type
+        if: env.HAS_XCODE_PROJECT == 'true'
         run: |
           if [ -d "$PROJECT_NAME.xcworkspace" ]; then
             echo "XCODE_CONTAINER=-workspace $PROJECT_NAME.xcworkspace" >> "$GITHUB_ENV"
@@ -46,13 +50,16 @@ jobs:
             echo "XCODE_CONTAINER=-project $PROJECT_NAME.xcodeproj" >> "$GITHUB_ENV"
           fi
       - name: Pick available iOS simulator
+        if: env.HAS_XCODE_PROJECT == 'true'
         run: |
           DEVICE=$(xcrun simctl list devices available | awk -F '[()]' '/iPhone/ {print $1; exit}' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
           if [ -z "$DEVICE" ]; then echo "No iPhone simulator available" >&2; exit 1; fi
           echo "SIMULATOR_NAME=$DEVICE" >> "$GITHUB_ENV"
       - name: Build
+        if: env.HAS_XCODE_PROJECT == 'true'
         run: |
           xcodebuild clean build $XCODE_CONTAINER -scheme "$SCHEME_NAME" -destination "generic/platform=iOS" CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO
       - name: Test
+        if: env.HAS_XCODE_PROJECT == 'true'
         run: |
           xcodebuild test $XCODE_CONTAINER -scheme "$SCHEME_NAME" -destination "platform=iOS Simulator,name=$SIMULATOR_NAME" CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO
