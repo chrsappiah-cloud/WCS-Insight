@@ -49,20 +49,15 @@ jobs:
           PY
           echo "Using simulator: $SIMULATOR_NAME ($SIMULATOR_UDID)"
       - name: Test Memory Atlas in simulator
-        run: |
-          xcodebuild test             -project WCS-Insight.xcodeproj             -scheme MemoryAtlas             -destination "id=$SIMULATOR_UDID"             CODE_SIGN_IDENTITY=""             CODE_SIGNING_REQUIRED=NO             CODE_SIGNING_ALLOWED=NO
-      - name: Capture simulator screenshot
-        if: success()
+        env:
+          WCS_SIMULATOR_SCREENSHOT_PATH: ${{ github.workspace }}/artifacts/memory-atlas-simulator.png
         run: |
           mkdir -p artifacts
-          xcrun simctl boot "$SIMULATOR_UDID" || true
-          xcrun simctl bootstatus "$SIMULATOR_UDID" -b
-          xcrun simctl launch "$SIMULATOR_UDID" org.worldclassscholars.memoryatlas
-          sleep 5
-          xcrun simctl io "$SIMULATOR_UDID" screenshot artifacts/memory-atlas-simulator.png
+          xcodebuild test             -project WCS-Insight.xcodeproj             -scheme MemoryAtlas             -destination "id=$SIMULATOR_UDID"             CODE_SIGN_IDENTITY=""             CODE_SIGNING_REQUIRED=NO             CODE_SIGNING_ALLOWED=NO
       - name: Upload simulator screenshot
         if: success()
         uses: actions/upload-artifact@v4
         with:
           name: memory-atlas-simulator
           path: artifacts/memory-atlas-simulator.png
+          if-no-files-found: error
