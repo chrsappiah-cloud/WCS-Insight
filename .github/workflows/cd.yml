@@ -1,0 +1,50 @@
+name: CD
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: read
+
+jobs:
+  archive:
+    name: Archive
+    runs-on: macos-15
+    env:
+      PROJECT_NAME: WCS-Insight
+      SCHEME_NAME: WCS-Insight
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
+
+      - name: Verify Xcode project exists
+        run: |
+          if [ ! -d "$PROJECT_NAME.xcodeproj" ] && [ ! -d "$PROJECT_NAME.xcworkspace" ]; then
+            echo "::notice::Upload/push the Xcode source for $PROJECT_NAME to activate release archives."
+            exit 0
+          fi
+
+      - name: Resolve project type
+        run: |
+          if [ -d "$PROJECT_NAME.xcworkspace" ]; then
+            echo "XCODE_CONTAINER=-workspace $PROJECT_NAME.xcworkspace" >> "$GITHUB_ENV"
+          else
+            echo "XCODE_CONTAINER=-project $PROJECT_NAME.xcodeproj" >> "$GITHUB_ENV"
+          fi
+
+      - name: Archive unsigned build artifact
+        run: |
+          xcodebuild archive             $XCODE_CONTAINER             -scheme "$SCHEME_NAME"             -destination "generic/platform=iOS"             -archivePath "$RUNNER_TEMP/$PROJECT_NAME.xcarchive"             SKIP_INSTALL=NO             CODE_SIGN_IDENTITY=""             CODE_SIGNING_REQUIRED=NO             CODE_SIGNING_ALLOWED=NO
+
+      - name: Upload archive artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: WCS-Insight-xcarchive
+          path: ${{ runner.temp }}/WCS-Insight.xcarchive
+          if-no-files-found: ignore
