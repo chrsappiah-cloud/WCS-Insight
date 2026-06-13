@@ -46,9 +46,11 @@ jobs:
         if: always()
         run: |
           mkdir -p artifacts
-          xcrun simctl launch booted org.worldclassscholars.memoryatlas || true
+          xcrun simctl boot "$SIMULATOR_NAME" || true
+          xcrun simctl bootstatus "$SIMULATOR_NAME" -b
+          xcrun simctl launch "$SIMULATOR_NAME" org.worldclassscholars.memoryatlas
           sleep 5
-          xcrun simctl io booted screenshot artifacts/memory-atlas-simulator.png
+          xcrun simctl io "$SIMULATOR_NAME" screenshot artifacts/memory-atlas-simulator.png
       - name: Upload simulator screenshot
         if: always()
         uses: actions/upload-artifact@v4
