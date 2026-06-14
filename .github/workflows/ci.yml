@@ -56,7 +56,7 @@ jobs:
           wait "$SCREENSHOT_PID" || true
           if [ -f artifacts/memory-atlas-simulator.png ]; then
             echo "SIMULATOR_SCREENSHOT_BASE64_BEGIN"
-            base64 artifacts/memory-atlas-simulator.png
+            base64 -i artifacts/memory-atlas-simulator.png
             echo "SIMULATOR_SCREENSHOT_BASE64_END"
           fi
           exit "$TEST_STATUS"
