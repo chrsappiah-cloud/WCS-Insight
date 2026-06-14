@@ -10,25 +10,21 @@ permissions:
   contents: read
 
 jobs:
-  build-test:
+  build-and-test:
     name: Build and Test
-    runs-on: macos-15
+    runs-on: macos-16
     env:
       PROJECT_NAME: WCS-Insight
       SCHEME_NAME: WCS-Insight
+
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
       - name: Select Xcode
         run: sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
 
-      - name: Verify Xcode project exists
-        run: |
-          if [ ! -d "$PROJECT_NAME.xcodeproj" ] && [ ! -d "$PROJECT_NAME.xcworkspace" ]; then
-            echo "::notice::Upload/push the Xcode source for $PROJECT_NAME to activate full CI."
-            exit 0
-          fi
+      - name: Show Xcode version
+        run: xcodebuild -version
 
       - name: Resolve project type
         run: |
@@ -48,10 +44,22 @@ jobs:
           echo "SIMULATOR_NAME=$DEVICE" >> "$GITHUB_ENV"
           echo "Using simulator: $DEVICE"
 
-      - name: Build
+      - name: Build and test
         run: |
-          xcodebuild clean build             $XCODE_CONTAINER             -scheme "$SCHEME_NAME"             -destination "generic/platform=iOS"             CODE_SIGN_IDENTITY=""             CODE_SIGNING_REQUIRED=NO             CODE_SIGNING_ALLOWED=NO
+          set -o pipefail
+          xcodebuild test \
+            $XCODE_CONTAINER \
+            -scheme "$SCHEME_NAME" \
+            -sdk iphonesimulator \
+            -destination "platform=iOS Simulator,name=$SIMULATOR_NAME" \
+            -test-iterations 3 \
+            -retry-tests-on-failure \
+            -resultBundlePath TestResults \
+            | xcpretty
 
-      - name: Test
-        run: |
-          xcodebuild test             $XCODE_CONTAINER             -scheme "$SCHEME_NAME"             -destination "platform=iOS Simulator,name=$SIMULATOR_NAME"             CODE_SIGN_IDENTITY=""             CODE_SIGNING_REQUIRED=NO             CODE_SIGNING_ALLOWED=NO
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: TestResults.xcresult
