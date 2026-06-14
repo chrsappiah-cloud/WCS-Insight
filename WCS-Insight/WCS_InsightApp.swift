@@ -1,18 +1,17 @@
-//
-//  WCS_InsightApp.swift
-//  WCS-Insight
-//
-//  Created by Christopher Appiah-Thompson  on 14/6/2026.
-//
-
-import SwiftUI
 import SwiftData
+import SwiftUI
 
 @main
 struct WCS_InsightApp: App {
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
-            Item.self,
+            CaregiverAccount.self,
+            PersonProfile.self,
+            MemoryArtifact.self,
+            GuidedSession.self,
+            GuidedSessionStep.self,
+            SessionRun.self,
+            CaregiverNote.self,
         ])
         let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
 
