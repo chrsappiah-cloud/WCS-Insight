@@ -54,6 +54,11 @@ jobs:
           xcodebuild test             -project WCS-Insight.xcodeproj             -scheme MemoryAtlas             -destination "platform=iOS Simulator,name=$SIMULATOR_NAME"             CODE_SIGN_IDENTITY=""             CODE_SIGNING_REQUIRED=NO             CODE_SIGNING_ALLOWED=NO
           TEST_STATUS=$?
           wait "$SCREENSHOT_PID" || true
+          if [ -f artifacts/memory-atlas-simulator.png ]; then
+            echo "SIMULATOR_SCREENSHOT_BASE64_BEGIN"
+            base64 artifacts/memory-atlas-simulator.png
+            echo "SIMULATOR_SCREENSHOT_BASE64_END"
+          fi
           exit "$TEST_STATUS"
       - name: Upload simulator screenshot
         if: success()
